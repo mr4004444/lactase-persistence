@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерактивная карта</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2980 0%, #26d0ce 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        
+        header {
+            background: linear-gradient(90deg, #2c3e50, #34495e);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 5px;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+        }
+        
+        .tab-bar {
+            display: flex;
+            background: #f1f8ff;
+            border-bottom: 2px solid #3498db;
+            padding: 0;
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 20px;
+            border: none;
+            background: none;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .tab-button:hover {
+            background: #e3f2fd;
+        }
+        
+        .tab-button.active {
+            background: white;
+            color: #2980b9;
+            border-bottom: 3px solid #2980b9;
+        }
+        
+        .content-area {
+            padding: 40px;
+            min-height: 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #fafafa;
+        }
+        
+        .map-wrapper {
+            width: 90%;
+            max-width: 900px;
+            position: relative;
+            margin-bottom: 25px;
+        }
+        
+        .map-container {
+            width: 100%;
+            position: relative;
+            border: 3px solid #3498db;
+            border-radius: 10px;
+            background: white;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.2);
+        }
+        
+        .map-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .marker {
+            position: absolute;
+            width: 1.5%;
+            min-width: 14px;
+            max-width: 22px;
+            aspect-ratio: 1/1;
+            border-radius: 50%;
+            cursor: pointer;
+            transform: translate(-50%, -50%);
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            z-index: 100;
+            transition: all 0.2s ease;
+        }
+        
+        .marker:hover {
+            width: 1.8%;
+            min-width: 16px;
+            max-width: 26px;
+            border-width: 3px;
+        }
+        
+        .marker::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 30%;
+            height: 30%;
+            background: white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .marker-0-10 { background: #1a237e; }
+        .marker-10-20 { background: #283593; }
+        .marker-20-30 { background: #3949ab; }
+        .marker-30-40 { background: #5c6bc0; }
+        .marker-40-50 { background: #7986cb; }
+        .marker-50-60 { background: #cf80d9; }
+        .marker-60-70 { background: #b46ebd; }
+        .marker-70-80 { background: #a363ab; }
+        .marker-80-90 { background: #93599a; }
+        .marker-90-100 { background: #86518c; }
+        
+        .info-window {
+            position: absolute;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            min-width: 200px;
+            max-width: 250px;
+            display: none;
+            z-index: 1000;
+            border: 2px solid #3498db;
+            pointer-events: auto;
+        }
+        
+        .info-title {
+            color: #2c3e50;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        
+        .info-content {
+            color: #34495e;
+            line-height: 1.5;
+            font-size: 0.95em;
+        }
+        
+        .info-frequency {
+            margin-top: 10px;
+            padding: 8px;
+            background: #f0f7ff;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+            border-left: 3px solid #3498db;
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 5px;
+            right: 8px;
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: #7f8c8d;
+            line-height: 1;
+            pointer-events: auto;
+        }
+        
+        .close-btn:hover {
+            color: #e74c3c;
+        }
+        
+        .data-info {
+            background: #e8f4fc;
+            padding: 25px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 900px;
+            margin-top: 20px;
+            border-left: 5px solid #3498db;
+        }
+        
+        .data-info h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-bottom: 25px;
+            width: 100%;
+            max-width: 900px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 3px rgba(0,0,0,0.2);
+        }
+        
+        .legend-color-0-10 { background: #1a237e; }
+        .legend-color-10-20 { background: #283593; }
+        .legend-color-20-30 { background: #3949ab; }
+        .legend-color-30-40 { background: #5c6bc0; }
+        .legend-color-40-50 { background: #7986cb; }
+        .legend-color-50-60 { background: #cf80d9 }
+        .legend-color-60-70 { background: #b46ebd; }
+        .legend-color-70-80 { background: #a363ab; }
+        .legend-color-80-90 { background: #93599a; }
+        .legend-color-90-100 { background: #86518c; }
+        
+        .legend-text {
+            color: #2c3e50;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        #lactose-description, #snp-description {
+            color: #34495e;
+            font-size: 1.1em;
+            line-height: 1.7;
+        }
+        
+        .info-icon {
+            font-size: 1.4em;
+        }
+        
+        .corner {
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            border: 2px solid #3498db;
+        }
+        
+        .corner-tl {
+            top: 15px;
+            left: 15px;
+            border-right: none;
+            border-bottom: none;
+        }
+        
+        .corner-tr {
+            top: 15px;
+            right: 15px;
+            border-left: none;
+            border-bottom: none;
+        }
+        
+        .corner-bl {
+            bottom: 15px;
+            left: 15px;
+            border-right: none;
+            border-top: none;
+        }
+        
+        .corner-br {
+            bottom: 15px;
+            right: 15px;
+            border-left: none;
+            border-top: none;
+        }
+        
+        .tab-content {
+            display: none;
+            width: 100%;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        .tab-content.active {
+            display: flex;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 15px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 20px;
+            font-size: 0.9em;
+            width: 100%;
+        }
+        
+        @media (max-width: 768px) {
+            .map-wrapper {
+                width: 95%;
+            }
+            
+            .tab-button {
+                padding: 15px 10px;
+                font-size: 1em;
+            }
+            
+            header h1 {
+                font-size: 2em;
+            }
+            
+            .content-area {
+                padding: 20px;
+            }
+            
+            .legend {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Интерактивная карта толерантности к лактозе</h1>
+        </header>
+        
+        <div class="tab-bar">
+            <button class="tab-button active" onclick="showTab(1)">
+                Толерантность к лактозе
+            </button>
+            <button class="tab-button" onclick="showTab(2)">
+                Однонуклеотидные полиморфизмы
+            </button>
+        </div>
+        
+        <div class="content-area">
+            <div id="tab1" class="tab-content active">
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color legend-color-0-10"></div>
+                        <span class="legend-text">0-10%</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-color-10-20"></div>
+                        <span class="legend-text">10-20%</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-color-20-30"></div>
+                        <span class="legend-text">20-30%</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-color-30-40"></div>
+                        <span class="legend-text">30-40%</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-color-40-50"></div>
+                        <span class="legend-text">40-50%</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-color-50-60"></div>
+                        <span class="legend-text">50-60%</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-color-60-70"></div>
+                        <span class="legend-text">60-70%</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-color-70-80"></div>
+                        <span class="legend-text">70-80%</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-color-80-90"></div>
+                        <span class="legend-text">80-90%</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-color-90-100"></div>
+                        <span class="legend-text">90-100%</span>
+                    </div>
+                </div>
+                
+                <div class="map-wrapper">
+                    <div class="map-container" id="mapContainer1">
+                        <div class="corner corner-tl"></div>
+                        <div class="corner corner-tr"></div>
+                        <div class="corner corner-bl"></div>
+                        <div class="corner corner-br"></div>
+                        
+                        <img class="map-image" 
+                             src="map.jpg" 
+                             alt="Карта мира"
+                             onload="initMap(this, 'mapContainer1')">
+                    </div>
+                </div>
+                
+                <div class="data-info">
+                    <h4><span class="info-icon">ℹ️</span> Данные о толерантности к лактозе</h4>
+                    <p id="lactose-description">Интерактивная карта с метками, показывающими процент населения 
+                    с толерантностью к лактозе в разных странах. Цвет метки соответствует уровню толерантности (от темно-синего – низкий, до темно-фиолетового – высокий).
+                    Щелкните по метке, чтобы увидеть подробную информацию.</p>
+                </div>
+            </div>
+            
+            <div id="tab2" class="tab-content">
+                <div class="map-wrapper">
+                    <div class="map-container" id="mapContainer2">
+                        <div class="corner corner-tl"></div>
+                        <div class="corner corner-tr"></div>
+                        <div class="corner corner-bl"></div>
+                        <div class="corner corner-br"></div>
+                        
+                        <img class="map-image" 
+                             src="map.jpg" 
+                             alt="Карта мира"
+                             onload="initMap(this, 'mapContainer2')">
+                    </div>
+                </div>
+                
+                <div class="data-info">
+                    <h4><span class="info-icon">ℹ️</span> Информация об однонуклеотидных полиморфизмах</h4>
+                    <p id="snp-description">Однонуклеотидные полиморфизмы (SNP) – это вариации последовательности ДНК, 
+                    при которых один нуклеотид в геноме отличается между членами биологического вида или 
+                    между гомологичными хромосомами у индивида. Синим цветом отмечены страны, при исследовании населения которых были выявлены SNP, отличные от -13910 C>T rs4988235.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>Интерактивная карта генетических данных</p>
+    </footer>
+
+    <script>
+        let activeInfoWindow = null;
+        
+        const markersData = {
+            'mapContainer1': [
+                {id: 'russia', x: 63.5, y: 15, title: 'Россия', content: '', frequency: 36,},
+                {id: 'sweden', x: 43.5, y: 23, title: 'Швейцария', content: '', frequency: 91},
+                {id: 'china', x: 72, y: 34, title: 'Китай', content: '', frequency: 15},
+                {id: 'south_c', x: 78, y: 31, title: 'Южная Корея', content: 'Количество анализов: 499', frequency: 1},
+                {id: 'japan', x: 80.5, y: 31, title: 'Япония', content: '', frequency: 28},
+                {id: 'taiwan', x: 77, y: 40, title: 'Тайвань', content: '', frequency: 12},
+                {id: 'mexico', x: 10, y: 40, title: 'Мексика', content: '', frequency: 52},
+                {id: 'brazil', x: 25, y: 65, title: 'Бразилия', content: '', frequency: 37},
+                {id: 'usa', x: 13, y: 30, title: 'США', content: '', frequency: 48},
+                {id: 'colombia', x: 18.5, y:54.5, title: 'Колумбия', content: '', frequency: 20},
+                {id: 'chile', x: 20, y:80, title: 'Чили', content: '', frequency: 38},
+                {id: 'kazakhstan', x: 59, y:22.5, title: 'Казахстан', content: '', frequency: 25},
+                {id: 'mongolia', x: 69, y:23.7, title: 'Монголия', content: '', frequency: 12},
+                {id: 'india', x: 64, y: 39, title: 'Индия', content: '', frequency: 41},
+                {id: 'tailand', x: 71.5, y: 45, title: 'Таиланд', content: '', frequency: 22},
+                {id: 'cambodia', x: 72.7, y: 46.7, title: 'Камбоджа', content: 'Количество анализов: 67', frequency: 5},
+                {id: 'vietnam', x: 73.5, y: 47.5, title: 'Вьетнам', content: 'Количество анализов: 40', frequency: 1},
+                {id: 'malaysia', x: 72, y: 54, title: 'Малазия', content: '', frequency: 13},
+                {id: 'png', x: 85, y: 61, title: 'Папуа-Новая Гвинея', content: 'Количество анализов: 40', frequency: 0.5},
+                {id: 'SL', x: 88, y: 61, title: 'Cоломоновы острова', content: 'Количество анализов: 44', frequency: 1},
+                {id: 'australia', x: 81, y: 75, title: 'Австралия', content: '', frequency: 49},
+                {id: 'new_ziland', x: 90, y: 85.5, title: 'Новая Зеландия', content: '', frequency: 64},
+                {id: 'fin', x: 47.5, y: 13, title: 'Новая Зеландия', content: '', frequency: 76},
+                {id: 'sweden', x: 45.3, y: 13, title: 'Швеция', content: 'Самый высокий показатель в мире', frequency: 93},
+                {id: 'nor', x: 43.5, y: 13.6, title: 'Норвегия', content: '', frequency: 89},
+                {id: 'brit', x: 40.5, y: 18, title: 'Великобритания', content: '', frequency: 82},
+                {id: 'irl', x: 39, y: 18, title: 'Ирландия', content: '', frequency: 96},
+                {id: 'germ', x: 43.5, y: 20, title: 'Германия', content: '', frequency: 86},
+                {id: 'fran', x: 41.5, y: 23.5, title: 'Франция', content: '', frequency: 63},
+                {id: 'span', x: 40, y: 28, title: 'Испания', content: '', frequency: 80},
+                {id: 'port', x: 38, y: 28.5, title: 'Португалия', content: '', frequency: 60},
+                {id: 'pol', x: 46.2, y: 20, title: 'Польша', content: '', frequency: 64},
+                {id: 'belg', x: 41.7, y: 20.6, title: 'Бельгия', content: '', frequency: 85},
+                {id: 'ital', x: 44.5, y: 27, title: 'Италия', content: '', frequency: 28},
+                {id: 'aust', x: 45, y: 23, title: 'Австрия', content: '', frequency: 80},
+                {id: 'grees', x: 47, y: 29, title: 'Греция', content: '', frequency: 47},
+                {id: 'turk', x: 51, y: 29, title: 'Турция', content: '', frequency: 38},
+                {id: 'iran', x: 56.7, y: 33.3, title: 'Иран', content: '', frequency: 12},
+                {id: 'irak', x: 53.5, y: 33.3, title: 'Ирак', content: '', frequency: 7},
+                {id: 'isr', x: 51.5, y: 33.3, title: 'Израиль', content: '', frequency: 12},
+                {id: 'kuw', x: 56.7, y: 39, title: 'Кувеит', content: '', frequency: 52},
+                {id: 'sau', x: 54, y: 39, title: 'Саудовская аравия', content: '', frequency: 70},
+                {id: 'yem', x: 55, y: 45.3, title: 'Йемен', content: 'Количество анализов: 245', frequency: 1},
+                {id: 'oma', x: 57.5, y: 42.5, title: 'Оман', content: '', frequency: 10},
+                {id: 'morr', x: 38.8, y: 34.5, title: 'Марокко', content: '', frequency: 24},
+                {id: 'senegal', x: 36.3, y: 46, title: 'Сенегал', content: '', frequency: 43},
+                {id: 'alg', x: 41.5, y: 37.4, title: 'Алжир', content: '', frequency: 39},
+                {id: 'nig', x: 43.5, y: 44, title: 'Ниггер', content: '', frequency: 25},
+                {id: 'nigeria', x: 43, y: 50, title: 'Ниггерия', content: 'Количество анализов: 119', frequency: 87},
+                {id: 'egp', x: 49.5, y: 38, title: 'Египет', content: '', frequency: 41},
+                {id: 'sud', x: 49.5, y: 47, title: 'Судан', content: '', frequency: 53},
+                {id: 'drk', x: 48, y: 59, title: 'ДРК', content: 'Количество анализов: 20', frequency: 1},
+                {id: 'urk', x: 48, y: 77.5, title: 'Южная Африка', content: '', frequency: 21},
+                {id: 'nab', x: 46, y: 72.5, title: 'Намибия', content: '', frequency: 9},
+                {id: 'canada', x: 13, y: 15, title: 'Канада', content: '', frequency: 46},
+                {id: 'bel', x: 48.5, y: 19, title: 'Беларусь', content: '', frequency: 37},
+                {id: 'ukr', x: 50, y: 22, title: 'Украина', content: '', frequency: 39},
+                {id: 'sri_lanka', x: 65.4, y: 51.7, title: 'Шри-Ланка', content: '', frequency: 28}
+            ],
+            'mapContainer2': [
+                {id: "russiaid", x: 63.5, y: 15, title: 'Россия', content: 'SNP:<br> -13910 C>T rs4988235<br> -13495 C>T rs4954490', frequency: 5},
+                {id: 'sweden', x: 43.5, y: 23, title: 'Швеция', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'china', x: 72, y: 34, title: 'Китай', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'mexico', x: 10, y: 40, title: 'Мексика', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'usa', x: 13, y: 30, title: 'США', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'chile', x: 20, y:80, title: 'Чили', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'fin', x: 47.5, y: 13, title: 'Новая Зеландия', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'sw', x: 45.3, y: 13, title: 'Швеция', content: 'SNP:<br> -13910 C>T rs4988235<br> -13495 C>T rs4954490', frequency: 5},
+                {id: 'nor', x: 43.5, y: 13.6, title: 'Норвегия', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'brit', x: 40.5, y: 18, title: 'Великобритания', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'irl', x: 39, y: 18, title: 'Ирландия', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'germ', x: 43.5, y: 20, title: 'Германия', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'fran', x: 41.5, y: 23.5, title: 'Франция', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'span', x: 40, y: 28, title: 'Испания', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'port', x: 38, y: 28.5, title: 'Португалия', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'pol', x: 46.2, y: 20, title: 'Польша', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'belg', x: 41.7, y: 20.6, title: 'Бельгия', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'ital', x: 44.5, y: 27, title: 'Италия', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'aust', x: 45, y: 23, title: 'Австрия', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'grees', x: 47, y: 29, title: 'Греция', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'turk', x: 51, y: 29, title: 'Турция', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'bel', x: 48.5, y: 19, title: 'Беларусь', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'iran', x: 56.7, y: 33.3, title: 'Иран', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'morr', x: 38.8, y: 34.5, title: 'Марокко', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'senegal', x: 36.3, y: 46, title: 'Сенегал', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'alg', x: 41.5, y: 37.4, title: 'Алжир', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'india', x: 64, y: 39, title: 'Индия', content: 'SNP:<br> -13910 C>T rs4988235'},
+                {id: 'nab', x: 46, y: 72.5, title: 'Намибия', content: 'SNP:<br> -13910 C>T rs4988235<br>-14010 G>C rs145946881', frequency: 5},
+                {id: 'urk', x: 48, y: 77.5, title: 'Южная Африка', content: 'SNP:<br> -13910 C>T rs4988235<br>-14010 G>C rs145946881', frequency: 5},
+                {id: 'sau', x: 54, y: 39, title: 'Саудовская аравия', content: 'SNP:<br> -13910 C>T rs4988235<br>-14010 G>C rs145946881<br> -13915 T>G rs41380347', frequency: 5},
+                {id: 'chad', x: 46.5, y: 45, title: 'Чад', content: 'SNP:<br> -13910 C>T rs4988235<br>-14010 G>C rs145946881<br> -13915 T>G rs41380347', frequency: 5},
+                {id: 'sud', x: 49.5, y: 47, title: 'Судан', content: 'SNP:<br> -13910 C>T rs4988235<br> -13907 C>G rs41525747<br> -13915 T>G rs41380347', frequency: 5},
+                {id: 'bots', x: 48, y: 72.4, title: 'Ботсвана', content: 'SNP:<br>  -14010 G>C rs145946881', frequency: 5},
+                {id: 'yem', x: 55, y: 45.3, title: 'Йемен', content: 'SNP:<br> -13910 C>T rs4988235<br> -13907 C>G rs41525747ы<br> -13915 T>G rs41380347' , frequency: 5},
+                {id: 'oma', x: 57.5, y: 42.5, title: 'Оман', content: 'SNP:<br> -13910 C>T rs4988235<br> -13915 T>G rs41380347', frequency: 5},
+                {id: 'mongolia', x: 69, y:23.7, title: 'Монголия', content: 'SNP:<br> -13910 C>T rs4988235<br> -13495 C>T rs4954490', frequency: 5}
+            ]
+        };
+
+        function showTab(tabNumber) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            document.getElementById(`tab${tabNumber}`).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function getMarkerColor(frequency) {
+            if (frequency < 10) return 'marker-0-10';
+            if (frequency < 20) return 'marker-10-20';
+            if (frequency < 30) return 'marker-20-30';
+            if (frequency < 40) return 'marker-30-40';
+            if (frequency < 50) return 'marker-40-50';
+            if (frequency < 60) return 'marker-50-60';
+            if (frequency < 70) return 'marker-60-70';
+            if (frequency < 80) return 'marker-70-80';
+            if (frequency < 90) return 'marker-80-90';
+            return 'marker-90-100';
+        }
+
+        function initMap(imgElement, containerId) {
+            const container = document.getElementById(containerId);
+            const markers = markersData[containerId] || [];
+            
+            markers.forEach(markerData => {
+                addMarker(container, imgElement, markerData);
+            });
+        }
+
+        function addMarker(container, imgElement, markerData) {
+            const markerColor = getMarkerColor(markerData.frequency || 50);
+            
+            const marker = document.createElement('div');
+            marker.className = `marker ${markerColor}`;
+            marker.id = markerData.id;
+            marker.style.left = markerData.x + '%';
+            marker.style.top = markerData.y + '%';
+            marker.title = `${markerData.title} - ${markerData.frequency}%`;
+            
+            const infoWindow = document.createElement('div');
+            infoWindow.className = 'info-window';
+            infoWindow.id = 'info-' + markerData.id;
+            
+            marker.addEventListener('click', function(event) {
+                event.stopPropagation();
+                
+                if (activeInfoWindow) {
+                    activeInfoWindow.style.display = 'none';
+                }
+                
+                const imgRect = imgElement.getBoundingClientRect();
+                const markerRect = marker.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                
+                let infoX = markerRect.left - containerRect.left;
+                let infoY = markerRect.top - containerRect.top - 120;
+                
+                if (infoX + 250 > imgRect.width) {
+                    infoX = markerRect.left - containerRect.left - 200;
+                }
+                
+                if (infoY < 0) {
+                    infoY = markerRect.top - containerRect.top + 30;
+                }
+                
+                infoWindow.style.left = infoX + 'px';
+                infoWindow.style.top = infoY + 'px';
+                infoWindow.style.display = 'block';
+                activeInfoWindow = infoWindow;
+            });
+            
+            let frequencyText = '';
+            if (markerData.frequency) {
+                if (container.id === 'mapContainer2') {
+                frequencyText = '';
+                } else {
+                frequencyText = `<div class="info-frequency">Толерантность: ${markerData.frequency}%</div>`;
+                }
+            }
+            
+            infoWindow.innerHTML = `
+                <button class="close-btn" onclick="closeInfo('${markerData.id}')">×</button>
+                <div class="info-title">${markerData.title}</div>
+                <div class="info-content">${markerData.content}</div>
+                ${frequencyText}
+            `;
+            
+            container.appendChild(marker);
+            container.appendChild(infoWindow);
+        }
+
+        function closeInfo(markerId) {
+            const infoWindow = document.getElementById('info-' + markerId);
+            if (infoWindow) {
+                infoWindow.style.display = 'none';
+                if (activeInfoWindow === infoWindow) {
+                    activeInfoWindow = null;
+                }
+            }
+        }
+
+        document.addEventListener('click', function(event) {
+            const clickedMarker = event.target.classList.contains('marker');
+            const clickedInfo = event.target.closest('.info-window');
+            
+            if (!clickedMarker && !clickedInfo) {
+                if (activeInfoWindow) {
+                    activeInfoWindow.style.display = 'none';
+                    activeInfoWindow = null;
+                }
+            }
+        });
+
+        window.addEventListener('resize', function() {
+            if (activeInfoWindow && activeInfoWindow.style.display === 'block') {
+                activeInfoWindow.style.display = 'none';
+                activeInfoWindow = null;
+            }
+        });
+
+        window.onload = function() {
+            showTab(1);
+        };
+    </script>
+</body>
+</html>
